@@ -18,6 +18,9 @@ app.get("/", (req, res) => {
   res.send("Welcome to the backend server!");
 });
 
-app.listen(5000, () => {
-  console.log("✅ Backend running on http://localhost:5000");
+const PORT = process.env.PORT || 5001;
+const HOST = process.env.HOST || "127.0.0.1";
+
+app.listen(PORT, HOST, () => {
+  console.log(`✅ Backend running on http://${HOST}:${PORT}`);
 });
