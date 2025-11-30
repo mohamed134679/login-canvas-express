@@ -51,16 +51,26 @@ app.post("/api/login", async (req, res) => {
       .input('password', password)
       .execute('HRLoginValidation');
 
-    console.log("Stored procedure result:", result);
+    console.log("Full result object:", JSON.stringify(result, null, 2));
+    console.log("Return value:", result.returnValue);
+    console.log("Recordset:", result.recordset);
 
-    // Check if the function returned a 1 (valid) or 0 (invalid)
-    // HRLoginValidation returns a BIT value (1 or 0)
-    const isValid = result.returnValue;
+    // HRLoginValidation is a FUNCTION that returns BIT
+    // Check both returnValue and recordset to handle different mssql package versions
+    let isValid = result.returnValue;
+    
+    if (isValid === undefined || isValid === null) {
+      // Try recordset if returnValue not available
+      if (result.recordset && result.recordset.length > 0) {
+        isValid = result.recordset[0];
+        console.log("Got validation from recordset:", isValid);
+      }
+    }
 
-    console.log("Validation result:", isValid);
+    console.log("Final validation result:", isValid);
 
-    if (!isValid || isValid === 0) {
-      console.log("Invalid credentials");
+    if (isValid === 0 || !isValid) {
+      console.log("Invalid credentials - isValid is:", isValid);
       return res.status(401).json({ 
         success: false, 
         error: "Invalid credentials" 

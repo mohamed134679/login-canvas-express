@@ -10,7 +10,7 @@ const Login = () => {
   const navigate = useNavigate();
   const [employeeId, setEmployeeId] = useState("");
   const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState<"employee" | "admin">("employee");
+  const [userType, setUserType] = useState<"academic" | "admin" | "hr">("academic");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,7 +28,6 @@ const Login = () => {
         body: JSON.stringify({
           employeeId,
           password,
-          userType,
         }),
       });
 
@@ -138,14 +137,14 @@ const Login = () => {
                 <div className="flex gap-2 p-1 bg-muted rounded-lg">
                   <button
                     type="button"
-                    onClick={() => setUserType("employee")}
+                    onClick={() => setUserType("academic")}
                     className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
-                      userType === "employee"
+                      userType === "academic"
                         ? "bg-card text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    Employee
+                    Academic
                   </button>
                   <button
                     type="button"
@@ -158,17 +157,34 @@ const Login = () => {
                   >
                     Admin
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setUserType("hr")}
+                    className={`flex-1 py-2.5 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+                      userType === "hr"
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    HR
+                  </button>
                 </div>
 
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="employeeId" className="text-sm font-medium">
-                      {userType === "admin" ? "Admin ID" : "Employee ID"}
+                      {userType === "admin" ? "Admin ID" : userType === "hr" ? "HR ID" : "Employee ID"}
                     </Label>
                     <Input
                       id="employeeId"
                       type="text"
-                      placeholder={userType === "admin" ? "Enter admin ID" : "Enter employee ID"}
+                      placeholder={
+                        userType === "admin" 
+                          ? "Enter admin ID" 
+                          : userType === "hr" 
+                          ? "Enter HR ID" 
+                          : "Enter employee ID"
+                      }
                       value={employeeId}
                       onChange={(e) => setEmployeeId(e.target.value)}
                       className="h-11 bg-background border-border/70 focus-visible:border-primary transition-colors"
