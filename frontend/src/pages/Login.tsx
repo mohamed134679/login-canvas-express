@@ -20,7 +20,7 @@ const Login = () => {
     setError("");
 
     try {
-      const response = await fetch("http://127.0.0.1:5001/api/login", {
+      const response = await fetch("http://localhost:5001/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -44,7 +44,7 @@ const Login = () => {
       localStorage.setItem("user", JSON.stringify(data.user));
       navigate("/");
     } catch (err) {
-      setError("Connection error. Make sure the backend is running on http://127.0.0.1:5001");
+      setError("Connection error. Make sure the backend is running on http://localhost:5001");
       console.error("Login error:", err);
     } finally {
       setLoading(false);
