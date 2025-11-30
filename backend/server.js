@@ -53,10 +53,9 @@ app.post("/api/login", async (req, res) => {
 
     console.log("Stored procedure result:", result);
 
-    // Check if the procedure returned a 1 (valid) or 0 (invalid)
-    const isValid = result.recordset && result.recordset.length > 0 
-      ? result.recordset[0] 
-      : result.returnValue;
+    // Check if the function returned a 1 (valid) or 0 (invalid)
+    // HRLoginValidation returns a BIT value (1 or 0)
+    const isValid = result.returnValue;
 
     console.log("Validation result:", isValid);
 
@@ -68,21 +67,43 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
-    // If valid, fetch user details
+    // Validation passed - fetch user details from Employee table
     const userResult = await connection.request()
       .input('employee_ID', employeeId)
-      .query(`SELECT TOP 1 * FROM Users WHERE employee_ID = @employee_ID`);
+      .query(`
+        SELECT 
+          employee_id, 
+          first_name, 
+          last_name, 
+          email, 
+          dept_name,
+          employment_status
+        FROM Employee 
+        WHERE employee_id = @employee_ID
+      `);
 
-    const user = userResult.recordset[0] || {};
+    console.log("User query result:", userResult);
+
+    if (!userResult.recordset || userResult.recordset.length === 0) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "User not found" 
+      });
+    }
+
+    const user = userResult.recordset[0];
     console.log("User found:", user);
-    
+
     res.json({ 
       success: true, 
       message: "Login successful",
       user: {
-        id: user.employee_ID || employeeId,
-        name: user.name || user.Name || "User",
-        type: userType
+        id: user.employee_id,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        email: user.email,
+        department: user.dept_name,
+        status: user.employment_status
       }
     });
 
