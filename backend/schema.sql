@@ -1,6 +1,6 @@
-create DATABASE University_HR_ManagementSystem;
+create DATABASE University_HR_ManagementSystem1;
 GO
-USE University_HR_ManagementSystem;
+USE University_HR_ManagementSystem1;
 GO
 
 
@@ -770,7 +770,7 @@ begin
     FROM Employee 
     WHERE employee_id = @emp_ID;
 -- check if it is not already pending, print error message
-    IF @current_status <> 'Pending'
+    IF @current_status <> 'pending'
     BEGIN
         PRINT 'Error: Leave request has already been processed.';
         RETURN;
@@ -781,11 +781,11 @@ begin
     begin
         -- update the table approve
         update Employee_Approve_Leave
-        set status = 'Approved'
+        set status = 'approved'
         where Emp1_ID = @HR_ID and leave_ID=@request_ID
         -- update the final status
         update Leave
-        set final_approval_status = 'Approved'
+        set final_approval_status = 'approved'
         where request_ID = @request_ID
         -- deduct from Annual balance of Employee
         UPDATE Employee 
@@ -806,12 +806,12 @@ insert into Employee_Replace_Employee (Emp1_ID,Emp2_ID,from_date, to_date) value
     begin
         --reject the leave
         UPDATE Employee_Approve_Leave 
-        SET status = 'Rejected' 
+        SET status = 'rejected' 
         WHERE leave_ID = @request_ID AND Emp1_ID = @HR_ID;
 
 
         UPDATE Leave 
-        SET final_approval_status = 'Rejected' 
+        SET final_approval_status = 'rejected' 
         WHERE request_ID = @request_ID;
     end
 
@@ -835,7 +835,7 @@ BEGIN
     WHERE employee_id = @emp_ID;
 
     -- Check if leave is already processed, print error message
-    IF @current_status <> 'Pending'
+    IF @current_status <> 'pending'
     BEGIN
         PRINT 'Error: Leave request has already been processed.';
         RETURN;
@@ -852,13 +852,13 @@ BEGIN
             
             -- Update HR approval status
             UPDATE Employee_Approve_Leave 
-            SET status = 'Approved' 
+            SET status = 'approved' 
             WHERE leave_ID = @request_ID AND Emp1_ID = @HR_ID;
 
 
             -- update the final status
             UPDATE Leave 
-            SET final_approval_status = 'Approved' 
+            SET final_approval_status = 'approved' 
             WHERE request_ID = @request_ID;
             
             
@@ -871,13 +871,13 @@ BEGIN
         begin
             -- Update HR approval status
             UPDATE Employee_Approve_Leave 
-            SET status = 'Rejected' 
+            SET status = 'rejected' 
             WHERE leave_ID = @request_ID AND Emp1_ID = @HR_ID;
 
 
              -- Reject the leave
             UPDATE Leave 
-            SET final_approval_status = 'Rejected' 
+            SET final_approval_status = 'rejected' 
             WHERE request_ID = @request_ID;
         end
 end
@@ -2170,10 +2170,8 @@ AS
 
 
 
-GO
 
-
-
+go
 ------
 insert into Department (name,building_location)
 values ('MET','C building')
@@ -2447,7 +2445,7 @@ values ('09-15-2025','10-19-2025','10-30-2025','approved')
 
 insert into leave (date_of_request,start_date,end_date
 ,final_approval_status)
-values ('10-09-2025','10-28-2025','10-28-2025','PENDING')
+values ('10-09-2025','10-28-2025','10-28-2025','pending')
 
 insert into leave (date_of_request,start_date,end_date
 ,final_approval_status)
@@ -2492,15 +2490,15 @@ values ('07-13-2025','08-13-2025','09-09-2025','approved')
 
 insert into leave (date_of_request,start_date,end_date
 ,final_approval_status)
-values ('08-13-2025','11-02-2025','12-13-2025','Pending')
+values ('08-13-2025','11-02-2025','12-13-2025','pending')
 
 insert into leave (date_of_request,start_date,end_date
 ,final_approval_status)
-values ('11-15-2025','11-27-2025','12-02-2025','Pending')
+values ('11-15-2025','11-27-2025','12-02-2025','pending')
 
 insert into leave (date_of_request,start_date,end_date
 ,final_approval_status)
-values ('10-15-2025','11-20-2025','12-02-2025','Pending')
+values ('10-15-2025','11-20-2025','12-02-2025','pending')
 
 insert into leave (date_of_request,start_date,end_date
 ,final_approval_status)
@@ -2709,28 +2707,28 @@ values (15,2,'approved')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
 values (4,2,'approved')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (13,3,'PENDING')
+values (13,3,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (5,3,'PENDING')
+values (5,3,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (15,4,'PENDING')
+values (15,4,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (4,4,'PENDING') 
+values (4,4,'pending') 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (9,5,'PENDING')
+values (9,5,'pending')
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (5,6,'PENDING')
+values (5,6,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (4,7,'PENDING')
+values (4,7,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (5,8,'PENDING')
+values (5,8,'pending')
 
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (4,9,'PENDING')  
+values (4,9,'pending')  
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (7,9,'PENDING') 
+values (7,9,'pending') 
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
 values (5,10,'approved')
@@ -2743,9 +2741,9 @@ insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
 values (7,11,'approved')
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (5,12,'PENDING')
+values (5,12,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (7,12,'PENDING')
+values (7,12,'pending')
 
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
@@ -2756,26 +2754,26 @@ insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
 values (4,13,'approved')
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (15,14,'PENDING')
+values (15,14,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (13,14,'PENDING')
+values (13,14,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (5,14,'PENDING')
+values (5,14,'pending')
 
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (15,15,'PENDING')
+values (15,15,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (11,15,'PENDING')
+values (11,15,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (4,15,'PENDING')
+values (4,15,'pending')
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (15,16,'PENDING')
+values (15,16,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (11,16,'PENDING')
+values (11,16,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
-values (4,16,'PENDING') 
+values (4,16,'pending') 
 
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
 values (4,17,'approved')
@@ -2786,5 +2784,3 @@ values (5,19,'pending')
 insert into Employee_Approve_Leave (Emp1_ID,leave_ID,status)
 values (5,20,'pending')
 ------------------------------------------------------
-
-

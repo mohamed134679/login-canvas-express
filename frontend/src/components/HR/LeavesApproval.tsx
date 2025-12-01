@@ -1,243 +1,114 @@
-import { useState, useEffect } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { AlertCircle, CheckCircle, XCircle } from "lucide-react";
-
-interface LeaveRequest {
-  requestId: number;
-  employeeId: number;
-  employeeName: string;
-  leaveType: "annual" | "accidental" | "unpaid" | "compensation";
-  startDate: string;
-  endDate: string;
-  numDays: number;
-  reason?: string;
-  status: "pending" | "approved" | "rejected";
-  employeeBalance?: number;
-  requiredBalance?: number;
-}
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertCircle, CheckCircle } from "lucide-react";
 
 interface LeavesApprovalProps {
   hrId: number;
 }
 
 const LeavesApproval = ({ hrId }: LeavesApprovalProps) => {
-  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [requestId, setRequestId] = useState("");
+  const [leaveType, setLeaveType] = useState<"annual-accidental" | "unpaid" | "compensation">("annual-accidental");
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  useEffect(() => {
-    fetchPendingLeaves();
-  }, [hrId]);
+  const handleProcess = async () => {
+    if (!requestId) {
+      setError("Please enter a request ID");
+      return;
+    }
 
-  const fetchPendingLeaves = async () => {
     try {
       setLoading(true);
-      // TODO: Implement backend endpoint to fetch pending leaves
-      // const response = await fetch(`http://localhost:5001/api/hr/leaves/pending?hrId=${hrId}`);
-      // const data = await response.json();
-      // setLeaves(data);
-      setLeaves([]);
-    } catch (err) {
-      setError("Failed to fetch pending leaves");
+      setError("");
+      setSuccess("");
+
+      const response = await fetch(`http://localhost:5001/api/hr/leaves/${leaveType}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId: parseInt(requestId), hrId }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to process leave");
+      }
+      
+      setSuccess(`Leave request ${requestId} processed successfully`);
+      setRequestId("");
+    } catch (err: any) {
+      setError(err.message || "Failed to process leave request");
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApprove = async (requestId: number, leaveType: string) => {
-    try {
-      const endpoint = leaveType === 'annual' || leaveType === 'accidental'
-        ? 'annual-accidental'
-        : leaveType === 'unpaid'
-        ? 'unpaid'
-        : 'compensation';
-
-      const response = await fetch(`http://localhost:5001/api/hr/leaves/${endpoint}/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId, hrId }),
-      });
-      
-      if (!response.ok) throw new Error("Failed to approve leave");
-      
-      console.log(`Approved leave request ${requestId}`);
-      fetchPendingLeaves();
-    } catch (err) {
-      setError("Failed to approve leave");
-      console.error(err);
-    }
-  };
-
-  const handleReject = async (requestId: number, leaveType: string) => {
-    try {
-      const endpoint = leaveType === 'annual' || leaveType === 'accidental'
-        ? 'annual-accidental'
-        : leaveType === 'unpaid'
-        ? 'unpaid'
-        : 'compensation';
-
-      const response = await fetch(`http://localhost:5001/api/hr/leaves/${endpoint}/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestId, hrId }),
-      });
-      
-      if (!response.ok) throw new Error("Failed to reject leave");
-      
-      console.log(`Rejected leave request ${requestId}`);
-      fetchPendingLeaves();
-    } catch (err) {
-      setError("Failed to reject leave");
-      console.error(err);
-    }
-  };
-
-  const LeaveCard = ({ leave }: { leave: LeaveRequest }) => (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div>
-            <CardTitle className="text-lg">{leave.employeeName}</CardTitle>
-            <CardDescription>Employee ID: {leave.employeeId}</CardDescription>
-          </div>
-          <Badge
-            variant={
-              leave.leaveType === "annual"
-                ? "default"
-                : leave.leaveType === "accidental"
-                ? "secondary"
-                : leave.leaveType === "unpaid"
-                ? "outline"
-                : "destructive"
-            }
-          >
-            {leave.leaveType.charAt(0).toUpperCase() + leave.leaveType.slice(1)}
-          </Badge>
-        </div>
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Process Leave Requests</CardTitle>
+        <CardDescription>Enter request ID to process leave (the system will automatically approve or reject based on the criteria)</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Start Date</p>
-              <p className="font-medium">{new Date(leave.startDate).toLocaleDateString()}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">End Date</p>
-              <p className="font-medium">{new Date(leave.endDate).toLocaleDateString()}</p>
-            </div>
+      <CardContent className="space-y-6">
+        {error && (
+          <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          </div>
+        )}
+
+        {success && (
+          <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg flex gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+            <p className="text-sm text-green-700 dark:text-green-300">{success}</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="leaveType">Leave Type</Label>
+            <Select value={leaveType} onValueChange={(value: any) => setLeaveType(value)}>
+              <SelectTrigger id="leaveType">
+                <SelectValue placeholder="Select leave type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="annual-accidental">Annual/Accidental</SelectItem>
+                <SelectItem value="unpaid">Unpaid</SelectItem>
+                <SelectItem value="compensation">Compensation</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {leave.numDays && (
-            <div className="p-2 bg-muted rounded">
-              <p className="text-sm font-medium">Duration: {leave.numDays} days</p>
-            </div>
-          )}
-
-          {leave.employeeBalance !== undefined && (
-            <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-muted-foreground">
-                Current Balance: <span className="font-bold">{leave.employeeBalance}</span> days
-              </p>
-            </div>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            <Button
-              size="sm"
-              variant="default"
-              onClick={() => handleApprove(leave.requestId, leave.leaveType)}
-              className="flex-1 gap-1"
-            >
-              <CheckCircle className="w-4 h-4" />
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => handleReject(leave.requestId, leave.leaveType)}
-              className="flex-1 gap-1"
-            >
-              <XCircle className="w-4 h-4" />
-              Reject
-            </Button>
+          <div className="space-y-2">
+            <Label htmlFor="requestId">Request ID</Label>
+            <Input
+              id="requestId"
+              type="number"
+              placeholder="Enter request ID"
+              value={requestId}
+              onChange={(e) => setRequestId(e.target.value)}
+              disabled={loading}
+            />
           </div>
+
+          <Button
+            onClick={handleProcess}
+            disabled={loading || !requestId}
+            className="w-full gap-2"
+          >
+            <CheckCircle className="w-4 h-4" />
+            {loading ? "Processing..." : "Process Leave"}
+          </Button>
         </div>
       </CardContent>
     </Card>
-  );
-
-  return (
-    <Tabs defaultValue="all" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="all">All Pending</TabsTrigger>
-        <TabsTrigger value="annual">Annual</TabsTrigger>
-        <TabsTrigger value="accidental">Accidental</TabsTrigger>
-        <TabsTrigger value="unpaid">Unpaid</TabsTrigger>
-        <TabsTrigger value="compensation">Compensation</TabsTrigger>
-      </TabsList>
-
-      {error && (
-        <div className="p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg flex gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
-          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Loading pending leaves...</p>
-        </div>
-      ) : leaves.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">No pending leave requests</p>
-        </div>
-      ) : (
-        <>
-          <TabsContent value="all" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {leaves.map((leave) => (
-              <LeaveCard key={leave.requestId} leave={leave} />
-            ))}
-          </TabsContent>
-
-          <TabsContent value="annual" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {leaves
-              .filter((l) => l.leaveType === "annual")
-              .map((leave) => (
-                <LeaveCard key={leave.requestId} leave={leave} />
-              ))}
-          </TabsContent>
-
-          <TabsContent value="accidental" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {leaves
-              .filter((l) => l.leaveType === "accidental")
-              .map((leave) => (
-                <LeaveCard key={leave.requestId} leave={leave} />
-              ))}
-          </TabsContent>
-
-          <TabsContent value="unpaid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {leaves
-              .filter((l) => l.leaveType === "unpaid")
-              .map((leave) => (
-                <LeaveCard key={leave.requestId} leave={leave} />
-              ))}
-          </TabsContent>
-
-          <TabsContent value="compensation" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {leaves
-              .filter((l) => l.leaveType === "compensation")
-              .map((leave) => (
-                <LeaveCard key={leave.requestId} leave={leave} />
-              ))}
-          </TabsContent>
-        </>
-      )}
-    </Tabs>
   );
 };
 

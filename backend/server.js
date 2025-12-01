@@ -271,6 +271,38 @@ app.post("/api/hr/leaves/annual-accidental/approve", async (req, res) => {
 
     const connection = await db.connectDB();
 
+    // Check if request exists in Annual_Leave or Accidental_Leave
+    const leaveCheck = await connection.request()
+      .input('request_ID', parseInt(requestId))
+      .query(`
+        SELECT 1 FROM Annual_Leave WHERE request_ID = @request_ID
+        UNION
+        SELECT 1 FROM Accidental_Leave WHERE request_ID = @request_ID
+      `);
+
+    if (!leaveCheck.recordset || leaveCheck.recordset.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Request ID not found in annual or accidental leaves" 
+      });
+    }
+
+    // Check if this HR is assigned to approve this leave
+    const assignmentCheck = await connection.request()
+      .input('request_ID', parseInt(requestId))
+      .input('HR_ID', parseInt(hrId))
+      .query(`
+        SELECT 1 FROM Employee_Approve_Leave 
+        WHERE leave_ID = @request_ID AND Emp1_ID = @HR_ID
+      `);
+
+    if (!assignmentCheck.recordset || assignmentCheck.recordset.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "This leave request is not assigned to you" 
+      });
+    }
+
     await connection.request()
       .input('request_ID', parseInt(requestId))
       .input('HR_ID', parseInt(hrId))
@@ -297,6 +329,34 @@ app.post("/api/hr/leaves/unpaid/approve", async (req, res) => {
     }
 
     const connection = await db.connectDB();
+
+    // Check if request exists in Unpaid_Leave
+    const leaveCheck = await connection.request()
+      .input('request_ID', parseInt(requestId))
+      .query(`SELECT 1 FROM Unpaid_Leave WHERE request_ID = @request_ID`);
+
+    if (!leaveCheck.recordset || leaveCheck.recordset.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Request ID not found in unpaid leaves" 
+      });
+    }
+
+    // Check if this HR is assigned to approve this leave
+    const assignmentCheck = await connection.request()
+      .input('request_ID', parseInt(requestId))
+      .input('HR_ID', parseInt(hrId))
+      .query(`
+        SELECT 1 FROM Employee_Approve_Leave 
+        WHERE leave_ID = @request_ID AND Emp1_ID = @HR_ID
+      `);
+
+    if (!assignmentCheck.recordset || assignmentCheck.recordset.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "This leave request is not assigned to you" 
+      });
+    }
 
     await connection.request()
       .input('request_ID', parseInt(requestId))
@@ -325,6 +385,34 @@ app.post("/api/hr/leaves/compensation/approve", async (req, res) => {
 
     const connection = await db.connectDB();
 
+    // Check if request exists in Compensation_Leave
+    const leaveCheck = await connection.request()
+      .input('request_ID', parseInt(requestId))
+      .query(`SELECT 1 FROM Compensation_Leave WHERE request_ID = @request_ID`);
+
+    if (!leaveCheck.recordset || leaveCheck.recordset.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Request ID not found in compensation leaves" 
+      });
+    }
+
+    // Check if this HR is assigned to approve this leave
+    const assignmentCheck = await connection.request()
+      .input('request_ID', parseInt(requestId))
+      .input('HR_ID', parseInt(hrId))
+      .query(`
+        SELECT 1 FROM Employee_Approve_Leave 
+        WHERE leave_ID = @request_ID AND Emp1_ID = @HR_ID
+      `);
+
+    if (!assignmentCheck.recordset || assignmentCheck.recordset.length === 0) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "This leave request is not assigned to you" 
+      });
+    }
+
     await connection.request()
       .input('request_ID', parseInt(requestId))
       .input('HR_ID', parseInt(hrId))
@@ -344,26 +432,86 @@ app.post("/api/hr/leaves/compensation/approve", async (req, res) => {
 // Add missing hours deduction
 app.post("/api/hr/deductions/missing-hours", async (req, res) => {
   try {
-    const { employeeId, date, hoursLost, reason, hrId } = req.body;
+    const { employeeId } = req.body;
 
-    if (!employeeId || !date || !hoursLost) {
-      return res.status(400).json({ success: false, error: "Missing required fields" });
+    if (!employeeId) {
+      return res.status(400).json({ success: false, error: "Employee ID is required" });
     }
 
     const connection = await db.connectDB();
 
-    // Call stored procedure or add deduction
+    // Check if deduction already exists for today
+    const existingDeduction = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT 1 
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID 
+        AND type = 'missing_hours'
+        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+      `);
+
+    if (existingDeduction.recordset && existingDeduction.recordset.length > 0) {
+      return res.json({
+        success: true,
+        message: "Deduction for missing hours already exists for today"
+      });
+    }
+
+    // Get current deduction count for this employee in current month
+    const beforeCount = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT COUNT(*) as count 
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID 
+        AND MONTH(date) = MONTH(GETDATE())
+        AND YEAR(date) = YEAR(GETDATE())
+      `);
+
+    console.log('Before count:', beforeCount.recordset[0].count);
+
+    // Call stored procedure
     await connection.request()
       .input('employee_ID', parseInt(employeeId))
       .execute('Deduction_hours');
 
+    // Check if deduction was added
+    const afterCount = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT COUNT(*) as count 
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID 
+        AND MONTH(date) = MONTH(GETDATE())
+        AND YEAR(date) = YEAR(GETDATE())
+      `);
+
+    console.log('After count:', afterCount.recordset[0].count);
+
+    // Also check all deductions for this employee
+    const allDeductions = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT deduction_ID, emp_ID, date, amount, type, status
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID
+        ORDER BY date DESC
+      `);
+
+    console.log('All deductions for employee', employeeId, ':', allDeductions.recordset);
+
+    const deductionApplied = afterCount.recordset[0].count > beforeCount.recordset[0].count;
+
     res.json({
       success: true,
-      message: "Missing hours deduction added successfully"
+      message: deductionApplied 
+        ? "Deduction applied successfully" 
+        : "No missing hours found for this employee"
     });
 
   } catch (error) {
-    console.error("Error adding missing hours deduction:", error);
+    console.error("Error processing missing hours deduction:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -371,26 +519,86 @@ app.post("/api/hr/deductions/missing-hours", async (req, res) => {
 // Add missing days deduction
 app.post("/api/hr/deductions/missing-days", async (req, res) => {
   try {
-    const { employeeId, month, daysCount, reason, hrId } = req.body;
+    const { employeeId } = req.body;
 
-    if (!employeeId || !daysCount) {
-      return res.status(400).json({ success: false, error: "Missing required fields" });
+    if (!employeeId) {
+      return res.status(400).json({ success: false, error: "Employee ID is required" });
     }
 
     const connection = await db.connectDB();
+
+    // Check if deduction already exists for today
+    const existingDeduction = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT 1 
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID 
+        AND type = 'missing_days'
+        AND CAST(date AS DATE) = CAST(GETDATE() AS DATE)
+      `);
+
+    if (existingDeduction.recordset && existingDeduction.recordset.length > 0) {
+      return res.json({
+        success: true,
+        message: "Deduction for missing days already exists for today"
+      });
+    }
+
+    // Get current deduction count for this employee in current month
+    const beforeCount = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT COUNT(*) as count 
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID 
+        AND MONTH(date) = MONTH(GETDATE())
+        AND YEAR(date) = YEAR(GETDATE())
+      `);
+
+    console.log('Before count (missing days):', beforeCount.recordset[0].count);
 
     // Call stored procedure
     await connection.request()
       .input('employee_id', parseInt(employeeId))
       .execute('Deduction_days');
 
+    // Check if deduction was added
+    const afterCount = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT COUNT(*) as count 
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID 
+        AND MONTH(date) = MONTH(GETDATE())
+        AND YEAR(date) = YEAR(GETDATE())
+      `);
+
+    console.log('After count (missing days):', afterCount.recordset[0].count);
+
+    // Also check all deductions for this employee
+    const allDeductions = await connection.request()
+      .input('employee_ID', parseInt(employeeId))
+      .query(`
+        SELECT deduction_ID, emp_ID, date, amount, type, status
+        FROM Deduction 
+        WHERE emp_ID = @employee_ID
+        ORDER BY date DESC
+      `);
+
+    console.log('All deductions for employee', employeeId, ':', allDeductions.recordset);
+
+    const deductionApplied = afterCount.recordset[0].count > beforeCount.recordset[0].count;
+
     res.json({
       success: true,
-      message: "Missing days deduction added successfully"
+      message: deductionApplied 
+        ? "Deduction applied successfully" 
+        : "No missing days found for this employee"
     });
 
   } catch (error) {
-    console.error("Error adding missing days deduction:", error);
+    console.error("Error processing missing days deduction:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
