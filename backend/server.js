@@ -800,6 +800,177 @@ app.post('/api/admin/initiate-attendance', async (req, res) => {
     }
 });
 
+// ===================== Admin Part 2 =====================
+// 1. Get attendance records for all employees for yesterday
+app.get('/api/admin/attendance-yesterday', async (req, res) => {
+  try {
+      const connection = await db.connectDB();
+      const result = await connection.request().query('SELECT * FROM allEmployeeAttendance');
+      res.json({
+          success: true,
+          message: "Fetched yesterday's attendance records successfully",
+          count: result.recordset.length,
+          data: result.recordset
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// 2. Get performance details for all employees in all Winter semesters
+app.get('/api/admin/performance-winter', async (req, res) => {
+  try {
+      const connection = await db.connectDB();
+      const result = await connection.request().query('SELECT * FROM allPerformance');
+      res.json({
+          success: true,
+          message: "Fetched Winter performance records successfully",
+          count: result.recordset.length,
+          data: result.recordset
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// 3. Remove attendance records for all employees during official holidays
+app.post('/api/admin/remove-holiday-attendance', async (req, res) => {
+  try {
+      const connection = await db.connectDB();
+      await connection.request().query('EXEC Remove_Holiday');
+      res.json({
+          success: true,
+          message: "Attendance records during official holidays removed successfully"
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 4. Remove unattended dayoff for an employee in the current month
+app.post('/api/admin/remove-dayoff', async (req, res) => {
+  const { employeeId } = req.body;
+
+  if (!employeeId) {
+      return res.status(400).json({
+          success: false,
+          error: "Employee ID is required"
+      });
+  }
+
+  try {
+      const connection = await db.connectDB();
+      const sql = await import('mssql');
+
+      await connection.request()
+          .input('Employee_id', sql.default.Int, parseInt(employeeId))
+          .execute('Remove_DayOff');
+
+      res.json({
+          success: true,
+          message: `Unattended dayoff records removed successfully for employee ${employeeId}`
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5. Remove approved leaves for a certain employee from attendance records
+app.post('/api/admin/remove-approved-leaves', async (req, res) => {
+  const { employeeId } = req.body;
+
+  if (!employeeId) {
+      return res.status(400).json({
+          success: false,
+          error: "Employee ID is required"
+      });
+  }
+
+  try {
+      const connection = await db.connectDB();
+      const sql = await import('mssql');
+
+      await connection.request()
+          .input('Employee_id', sql.default.Int, parseInt(employeeId))
+          .execute('Remove_Approved_Leaves');
+
+      res.json({
+          success: true,
+          message: `Approved leaves removed from attendance for employee ${employeeId}`
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 6. Replace another employee
+app.post('/api/admin/replace-employee', async (req, res) => {
+  const { emp1Id, emp2Id, fromDate, toDate } = req.body;
+
+  if (!emp1Id || !emp2Id || !fromDate || !toDate) {
+      return res.status(400).json({
+          success: false,
+          error: "emp1Id, emp2Id, fromDate and toDate are all required"
+      });
+  }
+
+  try {
+      const connection = await db.connectDB();
+      const sql = await import('mssql');
+
+      await connection.request()
+          .input('Emp1_ID', sql.default.Int, parseInt(emp1Id))
+          .input('Emp2_ID', sql.default.Int, parseInt(emp2Id))
+          .input('from_date', sql.default.Date, fromDate)
+          .input('to_date', sql.default.Date, toDate)
+          .execute('Replace_employee');
+
+      res.json({
+          success: true,
+          message: `Employee ${emp1Id} successfully replaced by ${emp2Id} from ${fromDate} to ${toDate}`
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7. Update the employee’s employment_status based on leave/active
+app.post('/api/admin/update-employment-status', async (req, res) => {
+  const { employeeId } = req.body;
+
+  if (!employeeId) {
+      return res.status(400).json({
+          success: false,
+          error: "Employee ID is required"
+      });
+  }
+
+  try {
+      const connection = await db.connectDB();
+      const sql = await import('mssql');
+
+      await connection.request()
+          .input('Employee_ID', sql.default.Int, parseInt(employeeId))
+          .execute('Update_Employment_Status');
+
+      res.json({
+          success: true,
+          message: `Employment status updated successfully for employee ${employeeId}`
+      });
+  } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+
+
+
+// =================== End Admin Part 2 ====================
+
+
 
 
 const PORT = process.env.PORT || 5001;
