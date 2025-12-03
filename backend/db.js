@@ -15,6 +15,8 @@ const config = {
   }
 };
 
+console.log(process.env.DB_SERVER, process.env.DB_USER, process.env.DB_PASSWORD, process.env.DB_DATABASE, process.env.DB_PORT);
+
 export async function connectDB() {
   return await sql.connect(config);
 }
